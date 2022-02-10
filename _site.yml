@@ -2,7 +2,7 @@ name: "baslare.github.io"
 title: "On the Path"
 description: |
   On the Path
-output_dir: "."     # root of master branch
+output_dir: "docs"     # root of master branch
 navbar:
   right:
     - text: "Home"
