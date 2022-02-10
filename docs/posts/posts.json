@@ -15,5 +15,22 @@
     "preview": {},
     "last_modified": "2022-02-10T15:46:26+01:00",
     "input_file": {}
+  },
+  {
+    "path": "posts/2022-02-10-first-things-first/",
+    "title": "First things first...",
+    "description": "A short description of the post.",
+    "author": [
+      {
+        "name": "Efe Baslar",
+        "url": "https://baslare.net"
+      }
+    ],
+    "date": "2022-02-10",
+    "categories": [],
+    "contents": "\r\nLet us see how this plot looks like:\r\n\r\n\r\n\r\nDistill is a publication format for scientific and technical writing, native to the web.\r\nLearn more about using Distill at https://rstudio.github.io/distill.\r\n\r\n\r\n\r\n",
+    "preview": "posts/2022-02-10-first-things-first/first-things-first_files/figure-html5/unnamed-chunk-1-1.png",
+    "last_modified": "2022-02-10T18:42:04+01:00",
+    "input_file": "first-things-first.knit.md"
   }
 ]

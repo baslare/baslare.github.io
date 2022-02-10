@@ -1,0 +1,37 @@
+---
+title: "First things first..."
+description: |
+  A short description of the post.
+author:
+  - name: Efe Baslar
+    url: https://baslare.net
+date: 2022-02-10
+output:
+  distill::distill_article:
+    self_contained: false
+---
+
+
+```{r setup, include=FALSE}
+require(tidyverse)
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+Let us see how this plot looks like:
+
+```{r}
+
+x = rnorm(1000,4,4)
+y = rnorm(1000,8,8)
+
+ggplot() + geom_point(aes(x,y))
+
+```
+
+
+Distill is a publication format for scientific and technical writing, native to the web.
+
+Learn more about using Distill at <https://rstudio.github.io/distill>.
+
+
