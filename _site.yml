@@ -9,6 +9,8 @@ navbar:
       href: index.html
     - text: "About"
       href: about.html
+    - text: "baslare.net"
+      href: https://baslare.net
 output: 
   distill::distill_article:
     css: styles.css

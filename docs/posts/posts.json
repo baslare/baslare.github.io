@@ -1,5 +1,22 @@
 [
   {
+    "path": "posts/2022-02-17-of-dner-and-currywurst/",
+    "title": "Of Doener and Currywurst",
+    "description": "A short description of the post.",
+    "author": [
+      {
+        "name": "Efe Baslar",
+        "url": {}
+      }
+    ],
+    "date": "2022-02-17",
+    "categories": [],
+    "contents": "\r\nDistill is a publication format for scientific and technical writing, native to the web.\r\nLearn more about using Distill at https://rstudio.github.io/distill.\r\n\r\n\r\n\r\n",
+    "preview": {},
+    "last_modified": "2022-02-17T01:14:23+01:00",
+    "input_file": "of-dner-and-currywurst.knit.md"
+  },
+  {
     "path": "posts/2022-02-10-first-things-first/",
     "title": "First things first...",
     "description": "A short description of the post.",
