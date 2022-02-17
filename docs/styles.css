@@ -19,3 +19,7 @@ body {
     
     
 }
+
+.posts-list .description h2, .posts-list .description p {
+    font-family: Karla;
+}
