@@ -1,0 +1,1035 @@
+---
+title: "Istanbul and Food Delivery: A Love Affair"
+description: |
+  Insights from a popular food delivery service data: 100% inflation rate in 18 months
+author:
+  - name: Efe Baslar
+    url: {https://baslare.net}
+date: 2022-02-17
+output:
+  distill::distill_article:
+    self_contained: false
+    toc: true
+bibliography: references.bib
+draft: true
+---
+
+
+
+```{r setup, echo=FALSE, include=FALSE}
+
+require(tidyverse)
+require(sf)
+require(ggsci)
+require(extrafont) 
+require(plotly)
+require(tweetrmd)
+
+
+
+
+
+
+```
+
+## Humble beginnings
+
+As with my major data analysis/science projects, this one has followed a course of growth over the last couple of years. As my approach changed, the product manifested itself in different and more detailed forms (for the better, I would say). But the main reason I am interested in food data is still the same. That is, well, that there are fundamental differences in how people from different backgrounds make eating decisions on a daily basis. After all, we are what we eat.
+
+Or, is it the other way around?
+
+I am not only talking about religion-driven or simple income-induced differences. Even eating can get political under particular conditions and certain edible items can and will be perceived as signals for association with a social group, as these signals usually become even more salient in polarized social settings [@dellaposta2015liberals]. As I continue exploring food industries in various locations (next up: Berlin), I took a detour to revisit Turkey's leading but increasingly infamous^[@duvarenglish_2021] food^[@duvarenglish_2022] delivery leviathan: yemeksepeti.com.
+
+One and a half year ago, for a tweet of mine that became somewhat of a hit (which I linked just below), I had tapped into the aforementioned delivery service for the first time. Scraping the data off it was rather straight forward: crawling JavaScript based content was not strictly necessary unless you wanted to have access to restaurants that are not open for delivery at that time of the day. This required (and still does) activating a simple check-box that triggered a JavaScript event that listed the restaurants regardless of their state. I did not particularly like that there was a possibility that some restaurants didn't get picked up by the rvest script but I still went along with scraping the data during the peak hours because I did not actually have much free time then. Fast forward a couple days, I had curated a data set that featured the menus of a sizable portion of the restaurants in Istanbul that partnered up with yemeksepeti, and the list of neighborhoods these restaurants served.
+
+Speaking of web-scraping, [here](https://github.com/baslare/ys2022) is the github repository for this most recent version of the project. I will try to make available all my projects unless I suspect that there might be possible terms of service violations with publicizing the codes and/or data. Whatever, back to the task at hand: This time around, I used Selenium in python to collect the links to each restaurant and rvest in R to collect the menus. It is a relief to think that I 
+
+Alright, back to September 2020. if you are interested - which you probably are, if you are here reading this post -, just take a look at the tweet. The main idea is that there are considerable differences in average Lahmacun prices (a popular dough, spice and meat based food, sometimes referred to as the "Turkish Pizza", woefully) across different districts in Istanbul. Naturally, the richer and the more attractive is the district, the higher are the prices... ostensibly. But is it that simple? There are numerous deviations from what you would expect based on that intuition and we might want to investigate this further. So, one of my motivations was to improve the script and delve further into the dynamics that surround the pricing of Lahmacun and other practical foods.
+
+
+
+
+```{r tweet, echo=FALSE, fig.cap="Lahmacun prices across Istanbul districts in September 2020"}
+
+tweet_embed("https://twitter.com/baslare/status/1302674859965718528")
+
+tweet_screenshot(tweet_url = "https://twitter.com/baslare/status/1302674859965718528",theme="dark")
+
+```
+
+In addition to my usual rationale for getting my hands dirty in the inspect functionality of my Firefox browser, I had to satiate my curiosity in one additional aspect. If you are keeping track of the news then you might possibly have heard of inflation soaring high^[@osterlund_2022] in Turkey and if you are a little perceptive, you might also have noticed that the official figures for annual inflation^[@darenbutler_2022] are met with stark suspicion^[@duvar_english_2021_b], well, for a plethora of reasons. So, for taking a peek at what "true" inflation looks like, there isn't a much better way than utilizing a service that Istanbulites have come to rely upon even more heavily in the Covid-19 world. Alright, without further ado, let us move on to the punchline
+
+
+## The Punchline
+
+```{r plot1, message = FALSE, echo = FALSE, warning=FALSE, fig.width=12, fig.height=8, fig.cap=" Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE,}
+
+
+
+source("C:/Users/Efe/Desktop/Projeler/ys2022/ys2022/ys_functions.R")
+
+
+#all_list <- jsonlite::fromJSON("C:/Users/Efe/Desktop/Projeler/ys2022_files/ys_all_list.json")
+ys_restdist_df <- jsonlite::fromJSON("C:/Users/Efe/Desktop/Projeler/ys2022_files/ys_restdist_df.json")
+#ys_restdist <-  jsonlite::fromJSON("C:/Users/Efe/Desktop/Projeler/ys2022_files/ys_restdist.json")
+#ys_url <- jsonlite::fromJSON("C:/Users/Efe/Desktop/Projeler/ys2022_files/ys_disturl.json")
+df_master <- readRDS("C:/Users/Efe/Desktop/Projeler/ys2022_files/df_master.RDS")
+ibb23haz <- read.csv("C:/Users/Efe/Desktop/Projeler/esmt_flash/ibb23Haz/ibb23Haz/ibb23Haz.csv",encoding = "UTF-8")
+dnm <- read.csv("C:/Users/Efe/Desktop/Projeler/ys2022_files/dnm.csv",header = FALSE)
+ist_mah_demo_df <- readRDS("C:/Users/Efe/Desktop/Projeler/ys2022_files/ist_mah_demo_df.rds")
+ist_ilce_demo_df <- readRDS("C:/Users/Efe/Desktop/Projeler/ys2022_files/ist_ilce_demo_df.rds")
+
+#all_list: contains the menus of each restaurant, df_master is the df form
+#ys_restdist: contains the name,url,rating of the restaurants that make deliveries to each district in list format
+#ys_restdist_df: contains the name,url,rating of the restaurants that make deliveries to each district (contains duplicate restaurants)
+#ys_url: urls of each restaurant (unique key)
+#df_master: all items in restaurant menus in a single df
+
+
+  
+  product_name <- "Lahmacun"
+  
+  if(product_name=="Lahmacun"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products,product_name)) %>% 
+      filter(!str_detect(products,"Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#8a1a04"
+    sci.palette = "yellow"
+  }else if(product_name=="Burger"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }else if(product_name=="Döner"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Tavuk|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#4f021b"
+    sci.palette = "pink"
+  }else if(product_name=="Tavuk Döner"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products, "Döner")) %>% 
+      filter(!str_detect(products,"Et|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }
+ 
+  #store the rating/min delivery price/min delivery time in a df for each *unique* restaurant
+  ys_restdist_df_unique <- ys_restdist_df %>% distinct(rest_url,.keep_all = T) %>% select(-district)
+  
+  
+  #calculate the averages in each restaurant for the desired group  
+  rest_product_averages <- df_sub %>% group_by(rest_name) %>% summarise(av_price=mean(prices))
+  #alternative statistics
+  #rest_product_median <- df_sub %>% group_by(rest_name) %>% summarise(av_price=median(prices))
+  #rest_product_min <- df_sub %>% group_by(rest_name) %>% summarise(av_price=min(prices))
+  #rest_product_max <- df_sub %>% group_by(rest_name) %>% summarise(av_price=max(prices))
+  
+  
+  #merge the product averages for each restaurant df with other restaurant statistics
+  
+  ys_restdist_df$min_package_tl <- ys_restdist_df$min_package_tl %>% scales::squish(range = c(10,max(ys_restdist_df$min_package_tl)))
+  
+  
+  dist_product_averages <- left_join(ys_restdist_df,rest_product_averages,by=c("rest_url"="rest_name"))
+  dist_product_averages <- dist_product_averages %>% drop_na()
+  
+  
+  rest_data_unique <- dist_product_averages %>% distinct(rest_url,.keep_all = T)
+  
+  
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% mutate(weighted_md_amount = (1/(min_package_tl))/sum(1/(min_package_tl)),
+                                                                             weighted_md_time = 1/(min_delivery_time)/sum(1/(min_delivery_time)) ,
+                                                                             weighted_both = 1/((min_package_tl*min_delivery_time))/sum(1/((min_package_tl*min_delivery_time)))) %>% 
+    ungroup()
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% summarise(av_price_amount =sum(weighted_md_amount*av_price),
+                                                                                      av_price_time = sum(weighted_md_time*av_price),
+                                                                                      av_price_both = sum(weighted_both*av_price),
+                                                                                      av_price=mean(av_price),
+                                                                                      count = n(),
+                                                                                      weighted_rating = sum(weighted_both*rating))
+                                                                                      
+                                                                                      
+  dist_product_averages$district_name <- dist_product_averages$district %>% str_split("/")
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name, function(x) x[[3]])
+  dist_product_averages$district_name <- dist_product_averages$district_name %>% str_split("-",n = 2)   
+  
+  dist_product_averages$distr_name <- sapply(dist_product_averages$district_name, function(x) x[[1]])                                       
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("macka","sisli")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("buyukada|kinaliada|burgazada","adalar")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("eyup","eyupsultan")
+  
+  
+  
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name,function(x){
+    if(length(x) > 1){
+      x[[2]]
+    }else{
+      x[[1]]
+    }
+  })
+  
+  
+  
+  
+  ilce_average <- dist_product_averages %>%
+    group_by(distr_name) %>% 
+    summarise(av_price=sum(av_price_amount*count/(sum(count))),
+                           av_price_uw=mean(av_price_amount),
+                           av_rating=sum(weighted_rating*count/(sum(count))),
+              count=mean(count))
+  
+  
+  ilce_map <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/ist_ilce.shp")
+  ilce_map$no_tr = ilce_map$name %>% stringi::stri_trans_general("latin-ascii")
+  ilce_map$no_tr <- ilce_map$no_tr %>% tolower()
+  ilce_map <- ilce_map %>% select(no_tr,name,geometry)
+  
+  #ist_ilce_demo_df <- get_ist_demo()
+  
+  
+  ilce_map <- left_join(ilce_map,ist_ilce_demo_df,by="no_tr")
+  
+  final_df <- left_join(ilce_map,ilce_average,by=c("no_tr"="distr_name"))
+  final_df$dist_area <- (sf::st_area(final_df)/1000000) %>% as.character() %>%  as.numeric() %>% scales::squish(c(35,200))
+  
+  istbbx <- c(28.3025,	40.7933,	29.5223,	41.3812)
+  
+  final_df <- final_df %>% st_crop( xmin = istbbx[1], xmax = istbbx[3],
+                                    ymin = istbbx[2], ymax = istbbx[4])
+  
+  
+  
+  final_df <- final_df %>% mutate(uni_grad_share = 0.01*universiteOran)
+  final_df <- final_df %>% rename(population = ikiBin19Nufus,rest_count = count)
+
+  final_df <- final_df %>% st_cast("MULTIPOLYGON")
+  final_df <- final_df %>% mutate(price_text=as.character(round(av_price,digits=1)))
+  
+  
+  
+  lakes <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/goller.shp")
+  lakes <- lakes %>% filter(type == "multipolygon")
+  lakes <- lakes %>% st_cast("MULTIPOLYGON")
+  
+  
+  quant_10 <- final_df$av_price %>% quantile(0.1,na.rm = T)
+  quant_90 <- final_df$av_price %>% quantile(0.9,na.rm = T)
+  
+  
+  plot_1 <- ggplot(final_df) + 
+    geom_sf(aes(fill=av_price),color="white",show.legend = FALSE,size=0.2) + 
+    geom_sf(data=lakes,color="transparent",fill="white") +
+    geom_sf_text(aes(label=price_text,
+                     size= 2 + log(10 + dist_area),group=name),
+                 color=text.color,
+                 show.legend = FALSE,
+                 family="Noto Sans") + 
+    scale_fill_material(sci.palette,oob=scales::squish,limits=c(quant_10,quant_90)) +  #15,20 for the lahmacun map
+    scale_size(range = c(2.5,5)) +
+    theme_bw() +
+    theme(axis.line = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank(),
+          panel.grid = element_blank(),
+          panel.background = element_blank(),
+          axis.title = element_blank(),
+          text = element_text(color=text.color,family = "Noto Sans"),
+          panel.border = element_rect(color="gray",size=0.3),
+          plot.title = element_text(hjust = 0.5,size = 10),
+          plot.caption = element_text(size=8),
+          plot.subtitle = element_text(hjust = 0.5,size = 8),
+    ) +
+    scale_x_continuous(limits = c(istbbx[1],istbbx[3])) +
+    scale_y_continuous(limits=c(istbbx[2],istbbx[4])) +
+    ggtitle(label = paste("Average", product_name ,"Prices \n in Istanbul Districts(TL)"),subtitle = 'February 2022') + labs(caption = "Efe Başlar - @baslare")
+  
+  #interactive
+  plotly::ggplotly(plot_1,tooltip = "name")
+
+
+
+```
+
+OK. Take a look at the map above. Move your mouse cursor over the districts for more information, if you'd like. Take a look at the previous iteration of the same map. Yup. It is correct. **The prices have increased around 100%** and that happened within a span of 18 months. Let that sink in. And no, I have not changed my methodology greatly, barring some improvements for more accurate estimation. I'll be detailing these improvements below but overall it is pretty similar to one I had then. Overall, inflation seem to be running rampart in the food industry and the prices seem to have inflated *equally* across districts: around a whopping 100%!
+
+### In need of a representative statistic
+
+Now, let us dive into some details about how this plot was created. Creating the plot was definitely not as straightforward as the maps seem. I mentioned just above that I had made some improvements in my approach. Improvements seldom come without any further complexity and this is one of those cases (not always, of course).
+
+yemeksepeti lists 961 precinct equivalent divisions for its partner network in Istanbul. This is deceptively similar to the true number of precincts in Istanbul, which stands at 964. However, some precincts are arbitrarily divided by yemeksepeti for operational reasons, as precincts are hardly homogeneous across different districts in Istanbul and not necessarily equally reachable: they range from a few hundred of inhabitants to a hundred thousand. 
+
+Precincts constitute the smallest possible Turkish administrative unit, as per the latest regulations. Districts, depicted on the maps in this post, house a number of districts. Basic math tells us that for each of the 39 districts in Istanbul we can expect to observe around 25 precincts. The way yemeksepeti stores its data doesn't tell much about where a restaurant is located. It would have been amazing to be able to have access to geolocation data but a web-scraper must live with what he can get his hands on. 
+
+Even knowing about the precise locations of each restaurant would not be able to change a simple fact: restaurant deliveries are trans-precinct and most likely trans-district. Each precinct is (*literally*) fed by a number of restaurants located in an around itself and some precincts are served by more restaurants than other precincts. Even though I was aware of this simple fact when I first delved into yemeksepeti data, I had only taken a simple average for each district, without giving any effort to create a more representative statistic under this particular structure of the data.
+
+![Minimum required total order amount to guarantee delivery]("ys_ss_1.png")
+
+
+
+
+Next up, even though I cannot provide any benchmark for the severity of the consumer inflation of other food items, you can find below maps and charts, followed by a couple of regression models to dig deeper into precinct-based, rather than district based analyses.
+
+
+
+
+
+
+
+```{r, echo=FALSE,results="asis"}
+
+#final_df <- ys_processed[[2]]
+
+nb_product_averages <- dist_product_averages
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("ilcesi")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace_all("-"," ") %>% str_trim() 
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("mah$")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_trim()
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove(" mah(.)+")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace("(?<=([0-9]))\\s",". ")
+nb_product_averages$district_name <- ifelse(nb_product_averages$district_name %>% str_detect("atakent"),"atakent",nb_product_averages$district_name)
+
+#dnm <- left_join(dist_product_averages, ist_mah_demo_df, by=c("district_name"="no_tr_mah","distr_name"="no_tr"))
+#write.csv(dnm,"dnm.csv")
+
+
+
+
+
+dnm <- dnm %>% select(V2,V9)
+dnm$V9 <- dnm$V9 %>% tolower() %>%  str_trim()
+
+nb_product_averages <- left_join(nb_product_averages,dnm,by=c("district"="V2"))
+nb_product_averages$V9 <- nb_product_averages$V9 %>% str_replace("catalcesme","catalmese")
+
+
+
+colnam <- colnames(nb_product_averages)[which(sapply(nb_product_averages,is.numeric))]
+
+nb_product_averages <- nb_product_averages %>% group_by(distr_name,V9) %>% summarise_at(.vars = colnam,.funs = mean)
+
+nb_product_averages <- left_join(nb_product_averages, ist_mah_demo_df, by=c("V9"="no_tr_mah","distr_name"="no_tr"))     
+nb_product_averages <- nb_product_averages %>% drop_na()
+
+nb_product_averages  <-nb_product_averages  %>% mutate(uni_grad_share = 0.01*universiteOran)
+nb_product_averages  <- nb_product_averages  %>% rename(pop_density = nufusYogunluk, pop = ikiBin19Nufus, rest_count = count)
+
+
+
+
+ibb23haz$no_tr <- ibb23haz$district %>% stringi::stri_trans_general("latin-ascii") %>% tolower()
+ibb23haz$no_tr_mah <- ibb23haz$precinct %>% stringi::stri_trans_general("latin-ascii") %>% tolower()
+
+
+colnam_ibb <- colnames(ibb23haz)[which(sapply(ibb23haz,is.numeric))]
+ibb23haz <- ibb23haz %>% group_by(no_tr,no_tr_mah) %>% summarise_at(.vars = colnam_ibb,.funs = sum)
+ibb23haz$no_tr_mah <- ibb23haz$no_tr_mah %>% str_remove("mah[.]$") %>% str_trim()
+ibb23haz$no_tr_mah <- ibb23haz$no_tr_mah %>% str_replace("merkez ataturk","ataturk")
+
+
+full_df <- left_join(nb_product_averages,ibb23haz,by=c("V9"="no_tr_mah","distr_name"="no_tr"))
+full_df <- full_df %>% mutate(akp_share = akp_06/voter_06,
+                              chp_share = chp_06/voter_06,
+)
+
+
+full_df <- full_df %>% filter(pop > 500)
+dd <- lm(av_price_amount ~ youth_male_share + youth_female_share + pop + pop_density + weighted_rating + uni_grad_share + chp_share + akp_share + rest_count,data=full_df)
+
+
+```
+
+
+## Moving Beyond Lahmacun
+
+```{r, message = FALSE, echo = FALSE, warning=FALSE, fig.width=12, fig.height=8, fig.cap=" Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+
+
+  product_name <- "Burger"
+  
+  if(product_name=="Lahmacun"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products,product_name)) %>% 
+      filter(!str_detect(products,"Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#8a1a04"
+    sci.palette = "yellow"
+  }else if(product_name=="Burger"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }else if(product_name=="Döner"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Tavuk|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#8a1a04"
+    sci.palette = "yellow"
+  }else if(product_name=="Tavuk Döner"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products, "Döner")) %>% 
+      filter(!str_detect(products,"Et|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }
+ 
+  #store the rating/min delivery price/min delivery time in a df for each *unique* restaurant
+  ys_restdist_df_unique <- ys_restdist_df %>% distinct(rest_url,.keep_all = T) %>% select(-district)
+  
+  
+  #calculate the averages in each restaurant for the desired group  
+  rest_product_averages <- df_sub %>% group_by(rest_name) %>% summarise(av_price=mean(prices))
+  #alternative statistics
+  #rest_product_median <- df_sub %>% group_by(rest_name) %>% summarise(av_price=median(prices))
+  #rest_product_min <- df_sub %>% group_by(rest_name) %>% summarise(av_price=min(prices))
+  #rest_product_max <- df_sub %>% group_by(rest_name) %>% summarise(av_price=max(prices))
+  
+  
+  #merge the product averages for each restaurant df with other restaurant statistics
+  
+  ys_restdist_df$min_package_tl <- ys_restdist_df$min_package_tl %>% scales::squish(range = c(10,max(ys_restdist_df$min_package_tl)))
+  
+  
+  dist_product_averages <- left_join(ys_restdist_df,rest_product_averages,by=c("rest_url"="rest_name"))
+  dist_product_averages <- dist_product_averages %>% drop_na()
+  
+  
+  rest_data_unique <- dist_product_averages %>% distinct(rest_url,.keep_all = T)
+  
+  
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% mutate(weighted_md_amount = (1/(min_package_tl))/sum(1/(min_package_tl)),
+                                                                             weighted_md_time = 1/(min_delivery_time)/sum(1/(min_delivery_time)) ,
+                                                                             weighted_both = 1/((min_package_tl*min_delivery_time))/sum(1/((min_package_tl*min_delivery_time)))) %>% 
+    ungroup()
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% summarise(av_price_amount =sum(weighted_md_amount*av_price),
+                                                                                      av_price_time = sum(weighted_md_time*av_price),
+                                                                                      av_price_both = sum(weighted_both*av_price),
+                                                                                      av_price=mean(av_price),
+                                                                                      count = n(),
+                                                                                      weighted_rating = sum(weighted_both*rating))
+                                                                                      
+                                                                                      
+  dist_product_averages$district_name <- dist_product_averages$district %>% str_split("/")
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name, function(x) x[[3]])
+  dist_product_averages$district_name <- dist_product_averages$district_name %>% str_split("-",n = 2)   
+  
+  dist_product_averages$distr_name <- sapply(dist_product_averages$district_name, function(x) x[[1]])                                       
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("macka","sisli")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("buyukada|kinaliada|burgazada","adalar")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("eyup","eyupsultan")
+  
+  
+  
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name,function(x){
+    if(length(x) > 1){
+      x[[2]]
+    }else{
+      x[[1]]
+    }
+  })
+  
+  
+  
+  
+  ilce_average <- dist_product_averages %>%
+    group_by(distr_name) %>% 
+    summarise(av_price=sum(av_price_amount*count/(sum(count))),
+                           av_price_uw=mean(av_price_amount),
+                           av_rating=sum(weighted_rating*count/(sum(count))),
+              count=mean(count))
+  
+  
+  ilce_map <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/ist_ilce.shp")
+  ilce_map$no_tr = ilce_map$name %>% stringi::stri_trans_general("latin-ascii")
+  ilce_map$no_tr <- ilce_map$no_tr %>% tolower()
+  ilce_map <- ilce_map %>% select(no_tr,name,geometry)
+  
+  #ist_ilce_demo_df <- get_ist_demo()
+  
+  
+  ilce_map <- left_join(ilce_map,ist_ilce_demo_df,by="no_tr")
+  
+  final_df <- left_join(ilce_map,ilce_average,by=c("no_tr"="distr_name"))
+  final_df$dist_area <- (sf::st_area(final_df)/1000000) %>% as.character() %>%  as.numeric() %>% scales::squish(c(35,200))
+  
+  istbbx <- c(28.3025,	40.7933,	29.5223,	41.3812)
+  
+  final_df <- final_df %>% st_crop( xmin = istbbx[1], xmax = istbbx[3],
+                                    ymin = istbbx[2], ymax = istbbx[4])
+  
+  
+  
+  final_df <- final_df %>% mutate(uni_grad_share = 0.01*universiteOran)
+  final_df <- final_df %>% rename(population = ikiBin19Nufus,rest_count = count)
+
+  final_df <- final_df %>% st_cast("MULTIPOLYGON")
+  final_df <- final_df %>% mutate(price_text=as.character(round(av_price,digits=1)))
+  
+  
+  
+  lakes <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/goller.shp")
+  lakes <- lakes %>% filter(type == "multipolygon")
+  lakes <- lakes %>% st_cast("MULTIPOLYGON")
+  
+  
+  quant_10 <- final_df$av_price %>% quantile(0.1,na.rm = T)
+  quant_90 <- final_df$av_price %>% quantile(0.9,na.rm = T)
+  
+  
+  plot_1 <- ggplot(final_df) + 
+    geom_sf(aes(fill=av_price),color="white",show.legend = FALSE,size=0.2) + 
+    geom_sf(data=lakes,color="transparent",fill="white") +
+    geom_sf_text(aes(label=price_text,
+                     size= 2 + log(10 + dist_area),group=name),
+                 color=text.color,
+                 show.legend = FALSE,
+                 family="Noto Sans") + 
+    scale_fill_material(sci.palette,oob=scales::squish,limits=c(quant_10,quant_90)) +  #15,20 for the lahmacun map
+    scale_size(range = c(2.5,5)) +
+    theme_bw() +
+    theme(axis.line = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank(),
+          panel.grid = element_blank(),
+          panel.background = element_blank(),
+          axis.title = element_blank(),
+          text = element_text(color=text.color,family = "Noto Sans"),
+          panel.border = element_rect(color="gray",size=0.3),
+          plot.title = element_text(hjust = 0.5,size = 10),
+          plot.caption = element_text(size=8),
+          plot.subtitle = element_text(hjust = 0.5,size = 8),
+    ) +
+    scale_x_continuous(limits = c(istbbx[1],istbbx[3])) +
+    scale_y_continuous(limits=c(istbbx[2],istbbx[4])) +
+    ggtitle(label = paste("Average", product_name ,"Prices \n in Istanbul Districts(TL)"),subtitle = 'February 2022') + labs(caption = "Efe Başlar - @baslare")
+  
+  #interactive
+  plotly::ggplotly(plot_1,tooltip = "name")
+
+
+```
+
+```{r plot2, echo=FALSE,results="asis"}
+#final_df <- ys_processed[[2]]
+
+nb_product_averages <- dist_product_averages
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("ilcesi")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace_all("-"," ") %>% str_trim() 
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("mah$")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_trim()
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove(" mah(.)+")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace("(?<=([0-9]))\\s",". ")
+nb_product_averages$district_name <- ifelse(nb_product_averages$district_name %>% str_detect("atakent"),"atakent",nb_product_averages$district_name)
+
+#dnm <- left_join(dist_product_averages, ist_mah_demo_df, by=c("district_name"="no_tr_mah","distr_name"="no_tr"))
+#write.csv(dnm,"dnm.csv")
+
+
+
+
+
+dnm <- dnm %>% select(V2,V9)
+dnm$V9 <- dnm$V9 %>% tolower() %>%  str_trim()
+
+nb_product_averages <- left_join(nb_product_averages,dnm,by=c("district"="V2"))
+nb_product_averages$V9 <- nb_product_averages$V9 %>% str_replace("catalcesme","catalmese")
+
+
+
+colnam <- colnames(nb_product_averages)[which(sapply(nb_product_averages,is.numeric))]
+
+nb_product_averages <- nb_product_averages %>% group_by(distr_name,V9) %>% summarise_at(.vars = colnam,.funs = mean)
+
+nb_product_averages <- left_join(nb_product_averages, ist_mah_demo_df, by=c("V9"="no_tr_mah","distr_name"="no_tr"))     
+nb_product_averages <- nb_product_averages %>% drop_na()
+
+nb_product_averages  <-nb_product_averages  %>% mutate(uni_grad_share = 0.01*universiteOran)
+nb_product_averages  <- nb_product_averages  %>% rename(pop_density = nufusYogunluk, pop = ikiBin19Nufus, rest_count = count)
+
+
+
+
+full_df <- left_join(nb_product_averages,ibb23haz,by=c("V9"="no_tr_mah","distr_name"="no_tr"))
+full_df <- full_df %>% mutate(akp_share = akp_06/voter_06,
+                              chp_share = chp_06/voter_06,
+)
+
+
+full_df <- full_df %>% filter(pop > 500)
+dd2 <- lm(av_price_amount ~ youth_male_share + youth_female_share + pop + pop_density + weighted_rating + uni_grad_share + chp_share + akp_share + rest_count,data=full_df)
+
+```
+```{r message = FALSE, echo = FALSE, warning=FALSE, fig.width=12, fig.height=8, fig.cap=" Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+ product_name <- "Döner"
+  
+  if(product_name=="Lahmacun"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products,product_name)) %>% 
+      filter(!str_detect(products,"Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#8a1a04"
+    sci.palette = "yellow"
+  }else if(product_name=="Burger"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }else if(product_name=="Döner"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Tavuk|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#4f021b"
+    sci.palette = "pink"
+  }else if(product_name=="Tavuk Döner"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products, "Döner")) %>% 
+      filter(!str_detect(products,"Et|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }
+ 
+  #store the rating/min delivery price/min delivery time in a df for each *unique* restaurant
+  ys_restdist_df_unique <- ys_restdist_df %>% distinct(rest_url,.keep_all = T) %>% select(-district)
+  
+  
+  #calculate the averages in each restaurant for the desired group  
+  rest_product_averages <- df_sub %>% group_by(rest_name) %>% summarise(av_price=mean(prices))
+  #alternative statistics
+  #rest_product_median <- df_sub %>% group_by(rest_name) %>% summarise(av_price=median(prices))
+  #rest_product_min <- df_sub %>% group_by(rest_name) %>% summarise(av_price=min(prices))
+  #rest_product_max <- df_sub %>% group_by(rest_name) %>% summarise(av_price=max(prices))
+  
+  
+  #merge the product averages for each restaurant df with other restaurant statistics
+  
+  ys_restdist_df$min_package_tl <- ys_restdist_df$min_package_tl %>% scales::squish(range = c(10,max(ys_restdist_df$min_package_tl)))
+  
+  
+  dist_product_averages <- left_join(ys_restdist_df,rest_product_averages,by=c("rest_url"="rest_name"))
+  dist_product_averages <- dist_product_averages %>% drop_na()
+  
+  
+  rest_data_unique <- dist_product_averages %>% distinct(rest_url,.keep_all = T)
+  
+  
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% mutate(weighted_md_amount = (1/(min_package_tl))/sum(1/(min_package_tl)),
+                                                                             weighted_md_time = 1/(min_delivery_time)/sum(1/(min_delivery_time)) ,
+                                                                             weighted_both = 1/((min_package_tl*min_delivery_time))/sum(1/((min_package_tl*min_delivery_time)))) %>% 
+    ungroup()
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% summarise(av_price_amount =sum(weighted_md_amount*av_price),
+                                                                                      av_price_time = sum(weighted_md_time*av_price),
+                                                                                      av_price_both = sum(weighted_both*av_price),
+                                                                                      av_price=mean(av_price),
+                                                                                      count = n(),
+                                                                                      weighted_rating = sum(weighted_both*rating))
+                                                                                      
+                                                                                      
+  dist_product_averages$district_name <- dist_product_averages$district %>% str_split("/")
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name, function(x) x[[3]])
+  dist_product_averages$district_name <- dist_product_averages$district_name %>% str_split("-",n = 2)   
+  
+  dist_product_averages$distr_name <- sapply(dist_product_averages$district_name, function(x) x[[1]])                                       
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("macka","sisli")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("buyukada|kinaliada|burgazada","adalar")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("eyup","eyupsultan")
+  
+  
+  
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name,function(x){
+    if(length(x) > 1){
+      x[[2]]
+    }else{
+      x[[1]]
+    }
+  })
+  
+  
+  
+  
+  ilce_average <- dist_product_averages %>%
+    group_by(distr_name) %>% 
+    summarise(av_price=sum(av_price_amount*count/(sum(count))),
+                           av_price_uw=mean(av_price_amount),
+                           av_rating=sum(weighted_rating*count/(sum(count))),
+              count=mean(count))
+  
+  
+  ilce_map <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/ist_ilce.shp")
+  ilce_map$no_tr = ilce_map$name %>% stringi::stri_trans_general("latin-ascii")
+  ilce_map$no_tr <- ilce_map$no_tr %>% tolower()
+  ilce_map <- ilce_map %>% select(no_tr,name,geometry)
+  
+  #ist_ilce_demo_df <- get_ist_demo()
+  
+  
+  ilce_map <- left_join(ilce_map,ist_ilce_demo_df,by="no_tr")
+  
+  final_df <- left_join(ilce_map,ilce_average,by=c("no_tr"="distr_name"))
+  final_df$dist_area <- (sf::st_area(final_df)/1000000) %>% as.character() %>%  as.numeric() %>% scales::squish(c(35,200))
+  
+  istbbx <- c(28.3025,	40.7933,	29.5223,	41.3812)
+  
+  final_df <- final_df %>% st_crop( xmin = istbbx[1], xmax = istbbx[3],
+                                    ymin = istbbx[2], ymax = istbbx[4])
+  
+  
+  
+  final_df <- final_df %>% mutate(uni_grad_share = 0.01*universiteOran)
+  final_df <- final_df %>% rename(population = ikiBin19Nufus,rest_count = count)
+
+  final_df <- final_df %>% st_cast("MULTIPOLYGON")
+  final_df <- final_df %>% mutate(price_text=as.character(round(av_price,digits=1)))
+  
+  
+  
+  lakes <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/goller.shp")
+  lakes <- lakes %>% filter(type == "multipolygon")
+  lakes <- lakes %>% st_cast("MULTIPOLYGON")
+  
+  
+  quant_10 <- final_df$av_price %>% quantile(0.1,na.rm = T)
+  quant_90 <- final_df$av_price %>% quantile(0.9,na.rm = T)
+  
+  
+  plot_3 <- ggplot(final_df) + 
+    geom_sf(aes(fill=av_price),color="white",show.legend = FALSE,size=0.2) + 
+    geom_sf(data=lakes,color="transparent",fill="white") +
+    geom_sf_text(aes(label=price_text,
+                     size= 2 + log(10 + dist_area),group=name),
+                 color=text.color,
+                 show.legend = FALSE,
+                 family="Noto Sans") + 
+    scale_fill_material(sci.palette,oob=scales::squish,limits=c(quant_10,quant_90)) +  #15,20 for the lahmacun map
+    scale_size(range = c(2.5,5)) +
+    theme_bw() +
+    theme(axis.line = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank(),
+          panel.grid = element_blank(),
+          panel.background = element_blank(),
+          axis.title = element_blank(),
+          text = element_text(color=text.color,family = "Noto Sans"),
+          panel.border = element_rect(color="gray",size=0.3),
+          plot.title = element_text(hjust = 0.5,size = 10),
+          plot.caption = element_text(size=8),
+          plot.subtitle = element_text(hjust = 0.5,size = 8),
+    ) +
+    scale_x_continuous(limits = c(istbbx[1],istbbx[3])) +
+    scale_y_continuous(limits=c(istbbx[2],istbbx[4])) +
+    ggtitle(label = paste("Average", product_name ,"Prices \n in Istanbul Districts(TL)"),subtitle = 'February 2022') + labs(caption = "Efe Başlar - @baslare")
+  
+  #interactive
+  plotly::ggplotly(plot_3,tooltip = "name")
+```
+
+
+```{r, echo=FALSE, results="asis"}
+
+nb_product_averages <- dist_product_averages
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("ilcesi")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace_all("-"," ") %>% str_trim() 
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("mah$")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_trim()
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove(" mah(.)+")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace("(?<=([0-9]))\\s",". ")
+nb_product_averages$district_name <- ifelse(nb_product_averages$district_name %>% str_detect("atakent"),"atakent",nb_product_averages$district_name)
+
+#dnm <- left_join(dist_product_averages, ist_mah_demo_df, by=c("district_name"="no_tr_mah","distr_name"="no_tr"))
+#write.csv(dnm,"dnm.csv")
+
+
+
+
+
+dnm <- dnm %>% select(V2,V9)
+dnm$V9 <- dnm$V9 %>% tolower() %>%  str_trim()
+
+nb_product_averages <- left_join(nb_product_averages,dnm,by=c("district"="V2"))
+nb_product_averages$V9 <- nb_product_averages$V9 %>% str_replace("catalcesme","catalmese")
+
+
+
+colnam <- colnames(nb_product_averages)[which(sapply(nb_product_averages,is.numeric))]
+
+nb_product_averages <- nb_product_averages %>% group_by(distr_name,V9) %>% summarise_at(.vars = colnam,.funs = mean)
+
+nb_product_averages <- left_join(nb_product_averages, ist_mah_demo_df, by=c("V9"="no_tr_mah","distr_name"="no_tr"))     
+nb_product_averages <- nb_product_averages %>% drop_na()
+
+nb_product_averages  <-nb_product_averages  %>% mutate(uni_grad_share = 0.01*universiteOran)
+nb_product_averages  <- nb_product_averages  %>% rename(pop_density = nufusYogunluk, pop = ikiBin19Nufus, rest_count = count)
+
+
+
+
+full_df <- left_join(nb_product_averages,ibb23haz,by=c("V9"="no_tr_mah","distr_name"="no_tr"))
+full_df <- full_df %>% mutate(akp_share = akp_06/voter_06,
+                              chp_share = chp_06/voter_06,
+)
+
+
+full_df <- full_df %>% filter(pop > 500)
+dd3 <- lm(av_price_amount ~ youth_male_share + youth_female_share + pop + pop_density + weighted_rating + uni_grad_share + chp_share + akp_share + rest_count,data=full_df)
+
+
+```
+
+
+
+```{r message = FALSE, echo = FALSE, warning=FALSE, fig.width=12, fig.height=8, fig.cap=" Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+ product_name <- "Tavuk Döner"
+  
+  if(product_name=="Lahmacun"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products,product_name)) %>% 
+      filter(!str_detect(products,"Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#8a1a04"
+    sci.palette = "yellow"
+  }else if(product_name=="Burger"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Kebap|Dürüm|Döner|Aras.|Pizza|Duble|Pide")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#0f1852"
+    sci.palette = "blue"
+  }else if(product_name=="Döner"){
+    
+    df_sub <- df_master %>% 
+      filter(str_detect(products, product_name)) %>% 
+      filter(!str_detect(products,"Tavuk|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#4f021b"
+    sci.palette = "pink"
+  }else if(product_name=="Tavuk Döner"){
+    df_sub <- df_master %>% 
+      filter(str_detect(products, "Döner")) %>% 
+      filter(!str_detect(products,"Et|Beyti|Mini|Falafel|Ekme.i|sos|Süt|Domatex|Sosu$|Sos$|Baharat|Mayone.|Ket.ap|Islak|Menü|[0-9]+|Pizza|Duble|Pide|.skender|Double|Burger|Pilav|Kebap|X")) %>% 
+      filter(!str_detect(products,"F.nd.k"))
+    text.color = "#153019"
+    sci.palette = "light-green"
+  }
+ 
+  #store the rating/min delivery price/min delivery time in a df for each *unique* restaurant
+  ys_restdist_df_unique <- ys_restdist_df %>% distinct(rest_url,.keep_all = T) %>% select(-district)
+  
+  
+  #calculate the averages in each restaurant for the desired group  
+  rest_product_averages <- df_sub %>% group_by(rest_name) %>% summarise(av_price=mean(prices))
+  #alternative statistics
+  #rest_product_median <- df_sub %>% group_by(rest_name) %>% summarise(av_price=median(prices))
+  #rest_product_min <- df_sub %>% group_by(rest_name) %>% summarise(av_price=min(prices))
+  #rest_product_max <- df_sub %>% group_by(rest_name) %>% summarise(av_price=max(prices))
+  
+  
+  #merge the product averages for each restaurant df with other restaurant statistics
+  
+  ys_restdist_df$min_package_tl <- ys_restdist_df$min_package_tl %>% scales::squish(range = c(10,max(ys_restdist_df$min_package_tl)))
+  
+  
+  dist_product_averages <- left_join(ys_restdist_df,rest_product_averages,by=c("rest_url"="rest_name"))
+  dist_product_averages <- dist_product_averages %>% drop_na()
+  
+  
+  rest_data_unique <- dist_product_averages %>% distinct(rest_url,.keep_all = T)
+  
+  
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% mutate(weighted_md_amount = (1/(min_package_tl))/sum(1/(min_package_tl)),
+                                                                             weighted_md_time = 1/(min_delivery_time)/sum(1/(min_delivery_time)) ,
+                                                                             weighted_both = 1/((min_package_tl*min_delivery_time))/sum(1/((min_package_tl*min_delivery_time)))) %>% 
+    ungroup()
+  
+  dist_product_averages <- dist_product_averages %>% group_by(district) %>% summarise(av_price_amount =sum(weighted_md_amount*av_price),
+                                                                                      av_price_time = sum(weighted_md_time*av_price),
+                                                                                      av_price_both = sum(weighted_both*av_price),
+                                                                                      av_price=mean(av_price),
+                                                                                      count = n(),
+                                                                                      weighted_rating = sum(weighted_both*rating))
+                                                                                      
+                                                                                      
+  dist_product_averages$district_name <- dist_product_averages$district %>% str_split("/")
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name, function(x) x[[3]])
+  dist_product_averages$district_name <- dist_product_averages$district_name %>% str_split("-",n = 2)   
+  
+  dist_product_averages$distr_name <- sapply(dist_product_averages$district_name, function(x) x[[1]])                                       
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("macka","sisli")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("buyukada|kinaliada|burgazada","adalar")
+  dist_product_averages$distr_name <- dist_product_averages$distr_name %>% str_replace("eyup","eyupsultan")
+  
+  
+  
+  dist_product_averages$district_name <- sapply(dist_product_averages$district_name,function(x){
+    if(length(x) > 1){
+      x[[2]]
+    }else{
+      x[[1]]
+    }
+  })
+  
+  
+  
+  
+  ilce_average <- dist_product_averages %>%
+    group_by(distr_name) %>% 
+    summarise(av_price=sum(av_price_amount*count/(sum(count))),
+                           av_price_uw=mean(av_price_amount),
+                           av_rating=sum(weighted_rating*count/(sum(count))),
+              count=mean(count))
+  
+  
+  ilce_map <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/ist_ilce.shp")
+  ilce_map$no_tr = ilce_map$name %>% stringi::stri_trans_general("latin-ascii")
+  ilce_map$no_tr <- ilce_map$no_tr %>% tolower()
+  ilce_map <- ilce_map %>% select(no_tr,name,geometry)
+  
+  #ist_ilce_demo_df <- get_ist_demo()
+  
+  
+  ilce_map <- left_join(ilce_map,ist_ilce_demo_df,by="no_tr")
+  
+  final_df <- left_join(ilce_map,ilce_average,by=c("no_tr"="distr_name"))
+  final_df$dist_area <- (sf::st_area(final_df)/1000000) %>% as.character() %>%  as.numeric() %>% scales::squish(c(35,200))
+  
+  istbbx <- c(28.3025,	40.7933,	29.5223,	41.3812)
+  
+  final_df <- final_df %>% st_crop( xmin = istbbx[1], xmax = istbbx[3],
+                                    ymin = istbbx[2], ymax = istbbx[4])
+  
+  
+  
+  final_df <- final_df %>% mutate(uni_grad_share = 0.01*universiteOran)
+  final_df <- final_df %>% rename(population = ikiBin19Nufus,rest_count = count)
+
+  final_df <- final_df %>% st_cast("MULTIPOLYGON")
+  final_df <- final_df %>% mutate(price_text=as.character(round(av_price,digits=1)))
+  
+  
+  
+  lakes <- read_sf("C:/Users/Efe/Desktop/Projeler/ys2022/shapefiles/goller.shp")
+  lakes <- lakes %>% filter(type == "multipolygon")
+  lakes <- lakes %>% st_cast("MULTIPOLYGON")
+  
+  
+  quant_10 <- final_df$av_price %>% quantile(0.1,na.rm = T)
+  quant_90 <- final_df$av_price %>% quantile(0.9,na.rm = T)
+  
+  
+  plot_4 <- ggplot(final_df) + 
+    geom_sf(aes(fill=av_price),color="white",show.legend = FALSE,size=0.2) + 
+    geom_sf(data=lakes,color="transparent",fill="white") +
+    geom_sf_text(aes(label=price_text,
+                     size= 2 + log(10 + dist_area),group=name),
+                 color=text.color,
+                 show.legend = FALSE,
+                 family="Noto Sans") + 
+    scale_fill_material(sci.palette,oob=scales::squish,limits=c(quant_10,quant_90)) +  #15,20 for the lahmacun map
+    scale_size(range = c(2.5,5)) +
+    theme_bw() +
+    theme(axis.line = element_blank(),
+          axis.ticks = element_blank(),
+          axis.text = element_blank(),
+          panel.grid = element_blank(),
+          panel.background = element_blank(),
+          axis.title = element_blank(),
+          text = element_text(color=text.color,family = "Noto Sans"),
+          panel.border = element_rect(color="gray",size=0.3),
+          plot.title = element_text(hjust = 0.5,size = 10),
+          plot.caption = element_text(size=8),
+          plot.subtitle = element_text(hjust = 0.5,size = 8),
+    ) +
+    scale_x_continuous(limits = c(istbbx[1],istbbx[3])) +
+    scale_y_continuous(limits=c(istbbx[2],istbbx[4])) +
+    ggtitle(label = paste("Average", product_name ,"Prices \n in Istanbul Districts(TL)"),subtitle = 'February 2022') + labs(caption = "Efe Başlar - @baslare")
+  
+  #interactive
+  plotly::ggplotly(plot_4,tooltip = "name")
+```
+
+```{r, echo=FALSE, results="asis"}
+
+
+nb_product_averages <- dist_product_averages
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("ilcesi")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace_all("-"," ") %>% str_trim() 
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove("mah$")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_trim()
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_remove(" mah(.)+")
+nb_product_averages$district_name <- nb_product_averages$district_name %>% str_replace("(?<=([0-9]))\\s",". ")
+nb_product_averages$district_name <- ifelse(nb_product_averages$district_name %>% str_detect("atakent"),"atakent",nb_product_averages$district_name)
+
+#dnm <- left_join(dist_product_averages, ist_mah_demo_df, by=c("district_name"="no_tr_mah","distr_name"="no_tr"))
+#write.csv(dnm,"dnm.csv")
+
+
+
+
+
+dnm <- dnm %>% select(V2,V9)
+dnm$V9 <- dnm$V9 %>% tolower() %>%  str_trim()
+
+nb_product_averages <- left_join(nb_product_averages,dnm,by=c("district"="V2"))
+nb_product_averages$V9 <- nb_product_averages$V9 %>% str_replace("catalcesme","catalmese")
+
+
+
+colnam <- colnames(nb_product_averages)[which(sapply(nb_product_averages,is.numeric))]
+
+nb_product_averages <- nb_product_averages %>% group_by(distr_name,V9) %>% summarise_at(.vars = colnam,.funs = mean)
+
+nb_product_averages <- left_join(nb_product_averages, ist_mah_demo_df, by=c("V9"="no_tr_mah","distr_name"="no_tr"))     
+nb_product_averages <- nb_product_averages %>% drop_na()
+
+nb_product_averages  <-nb_product_averages  %>% mutate(uni_grad_share = 0.01*universiteOran)
+nb_product_averages  <- nb_product_averages  %>% rename(pop_density = nufusYogunluk, pop = ikiBin19Nufus, rest_count = count)
+
+
+
+
+full_df <- left_join(nb_product_averages,ibb23haz,by=c("V9"="no_tr_mah","distr_name"="no_tr"))
+full_df <- full_df %>% mutate(akp_share = akp_06/voter_06,
+                              chp_share = chp_06/voter_06,
+)
+
+
+full_df <- full_df %>% filter(pop > 500)
+dd4 <- lm(av_price_amount ~ youth_male_share + youth_female_share + pop + pop_density + weighted_rating + uni_grad_share + chp_share + akp_share + rest_count,data=full_df)
+
+stargazer::stargazer(dd, dd2, dd3, dd4,
+                     column.labels = c("Lahmacun","Burger", "Döner"),
+                     dep.var.labels = "Average Price",
+                     type = "html")
+
+```
+
+Distill is a publication format for scientific and technical writing, native to the web.
+
+Learn more about using Distill at <https://rstudio.github.io/distill>.
+
+
