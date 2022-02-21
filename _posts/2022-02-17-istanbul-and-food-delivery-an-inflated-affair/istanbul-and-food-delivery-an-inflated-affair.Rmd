@@ -11,6 +11,7 @@ output:
     self_contained: false
     toc: true
 bibliography: references.bib
+preview: ist_lahmacun2022.jpeg
 
 ---
 <style>
@@ -57,7 +58,7 @@ Alright, back to September 2020. if you are interested - which you probably are,
 
 tweet_embed("https://twitter.com/baslare/status/1302674859965718528")
 
-tweet_screenshot(tweet_url = "https://twitter.com/baslare/status/1302674859965718528",theme="dark")
+#tweet_screenshot(tweet_url = "https://twitter.com/baslare/status/1302674859965718528",theme="dark")
 
 ```
 
