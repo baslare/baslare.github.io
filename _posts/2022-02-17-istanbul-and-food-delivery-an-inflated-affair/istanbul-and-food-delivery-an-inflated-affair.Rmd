@@ -11,7 +11,7 @@ output:
     self_contained: false
     toc: true
 bibliography: references.bib
-preview: ist_lahmacun2022.jpeg
+preview: ist_lahmacun_2022.jpeg
 
 ---
 <style>
