@@ -1,7 +1,7 @@
 ---
 title: "Istanbul and Food Delivery: An Inflated Affair"
 description: |
-  100% inflation rate in 18 months
+  Insights from food delivery data: 100% inflation rate in 18 months
 author:
   - name: Efe Baslar
     url: {https://baslare.net}
@@ -1034,7 +1034,7 @@ I would now like to tend to the question I posed in the beginning: what are the 
 
 We are now set to see if voting behavior and certain demographics are in any way related to variation in prices of each of the four food articles we talked about. Since I would love to evade multicolinearity as much as possible, I tried to "merge" the information from correlated and relevant variables into one variable. The model specification is as follows:
 
-$$\small price_i = rating_i + log(pop_i) + count_i + AKP{\%\_}CHP{\%}{\_}diff_i + youth{\%\_}diff_i $$
+$$\small price_i = \beta_0 +\beta_1rating_i + \beta_2log(pop_i) + \beta_3count_i + \beta_4AKP{\%\_}CHP{\%}{\_}diff_i + \beta_5youth{\%\_}diff_i $$
 where the dependent variable $price_i$ is the average product price in restaurants serving the precinct $i$, explained by the (weighted) average rating of the restaurants serving the precinct, logarithm of the precinct population, the number of restaurants serving that product, the difference in vote shares of AKP (Erdogan's party)  and (the main opposition: social democrats), and the differences in the ratios between males and females that are between ages 15 and 39. As far as I could tell, there are no imminent endogeneity problems and it is relatively safe to use the OLS regression here.
 
 
