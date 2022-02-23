@@ -1,5 +1,6 @@
 name: "baslare.github.io"
 title: "On the Path"
+favicon: favicon.ico
 description: |
   On the Path
 base_url: https://blog.baslare.net
