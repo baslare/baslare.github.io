@@ -13,6 +13,13 @@ navbar:
       href: about.html
     - text: "baslare.net"
       href: https://baslare.net
+    - icon: fab fa-github
+      text: "github"
+      href: https://github.com/baslare
+    - icon: fa-brands fa-twitter
+      href: https://twitter.com/baslare
+    - icon: fa-brands fa-linkedin
+      href: https://www.linkedin.com/in/efebaslar
 output: 
   distill::distill_article:
     css: styles.css
