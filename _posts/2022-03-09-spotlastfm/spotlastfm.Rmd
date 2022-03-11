@@ -308,6 +308,8 @@ But let us first see what the spotify API has in store for us. I discarded the f
   - __energy:__  a measure of intensity and activity levels of the track
   - __loudness:__ a measure of, well, how loud a track is.
   - __tempo:__ how fast the song is.
+  
+__Genre__
 
 A disclaimer before we move on: the genres and artists are only represented by how much I listened to them, there is obviously a bias here but it is good to know how open I am to the more distant genres. On a side note, all the variables are scaled to 0 mean without which it would not make sense to run a principal component analysis.
 
@@ -315,7 +317,7 @@ The first two principal components shown below accounts for more than 81% of the
 
 You can see that most of the prog genres are clustered around a sweet spot that I seem to like: Not too loud, not too fast, not as dark as black metal but at the same time still keeping metal traits. No wonder the power metal I like is in the immediate vicinity of prog metal, I suspected as much even though I saw prog metal and power metal being put at two extreme edges of a dichotomy. 
 
-__Genre__
+
 
 ```{r plot5, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Genre PCA: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
 
