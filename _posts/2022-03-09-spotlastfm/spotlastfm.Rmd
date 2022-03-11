@@ -1,34 +1,47 @@
 ---
 title: "Quantifying my taste in music: A marriage between spotify and last.fm APIs"
 description: |
-  A short description of the post.
+  A personal inquiry into a personal matter
 author:
   - name: Efe Baslar
     url:
       https://baslare.net: {}
-date: 2022-03-09
+date: 2022-03-11
 output:
   distill::distill_article:
     self_contained: false
     toc: true
-draft: true
+
+
 ---
 
 <style>
 body {
-text-align: justify}
+text-align: justify;}
+
+.d-title{
+text-align: left;
+}
+
+.d-article-with-toc{
+text-align: left;
+}
+
+p {
+text-align: justify;
+}
 </style>
 
 
 ## First things first
 
-This is a rather short blog post about humble analyses of my humble taste in music. I have no claim of being a music connoisseur and in fact my taste could very well be viewed as bland and unrefined. This, however, does not stop me from analyzing it. 
+This is a rather short blog post about humble analyses of my humble taste in music. I have no claim of being a music connoisseur and in fact my taste could very well be viewed as bland and unrefined. This, however, does not stop me from analyzing it. My initial goal was to come up with analyses that lay out the patterns in my listening habits and to find out which artist and tracks I played the most throughout the years.
 
 ### Last.fm API
 
 So, I have been a faithful last.fm user^[https://www.last.fm/tr/user/baslare] over the years and I have a peculiar partiality for seeing my taste in music kept track of. As I am writing this, a quick glance to my last.fm page reveals that I have listened to over 95000 tracks (called a _scrobble_ if one chooses to observe the last.fm jargon) in a span of 9 years, most of which coming from proggy genres. The true number of tracks I listened to is possibly much higher in the same time period as I also frequent youtube so that I can get some soundtrack rolling while I am studying, since youtube generally has better curated content in this aspect.
 
-Anyway, Prog genres and sub genres usually feature much longer tracks than your usual hit song and the mere _scrobble_ count on last.fm therefore does not necessarily reveal your __true__ addiction.
+Anyway, Prog genres and sub genres usually feature much longer tracks than your usual hit song and the mere _scrobble_ tally on last.fm therefore does not necessarily reveal your __true__ addiction.
 
 However, the last.fm API^[https://www.last.fm/api/intro] is pretty limited when it comes to taking a peek at song characteristics. Consequently, to answer the simple question "to whom I listened the most?", the last.fm API itself is not enough. While this could come as a letdown, it should cheer you up a little to know that it kindly gives you access to your entire _scrobble_ record along with the top tags for each track/artist/album, both of which I have utilized throughout the analysis (Of course its capabilities are not limited to these two but these two are the ones that are immediately relevant for our analysis) The fact that we can access our _scrobble_ record is particularly important since the spotify API provides no such functionality. Making it vital to rely on both APIs at once.
 
@@ -42,9 +55,7 @@ Speaking of the spotify API^[https://developer.spotify.com/documentation/web-api
 - After getting the match list, use the unique spotify ID for each track to retrieve the audio features associated to it.
 - Merge and clean all we need; proceed to the analysis, prepare the visualizations.
 
-Please find the github repo associated with this project [here](https://github.com/baslare/spotify_lastfm_analysis) to see how exactly I went through these steps. I used python to deal with the GET and POST requests and R to do the analyses and the visualizations.
 
-Before moving on, let me share with you what my _true_ list of top 20 tracks look like and note how they compare to the number of times each track was scrobbled on last.fm. It shouldn't come as a surprise that most of these tracks are over 10 minutes long. 
 ```{r, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 require(jsonlite)
@@ -121,22 +132,45 @@ prog_artists_count <- prog_count %>% group_by(artist.name) %>% summarise_if(is.n
 
 ```
 
+Please find the github repo associated with this project [here](https://github.com/baslare/spotify_lastfm_analysis) to see how exactly I went through these steps. I used python to deal with the GET and POST requests and R to do the analyses and the visualizations.
+
+Before moving on, let me share with you what my _true_ list of top 20 artists and tracks look like and note how they compare to the number of times each track was scrobbled on last.fm. It shouldn't come as a surprise that most of these tracks are over 10 minutes long. There are some artists whose songs I listened to for hundreds of hours. No regret. 100% would do it again.
+
+```{r fig2, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10,cache=FALSE,results="asis"}
+
+all_artists_count <- song_count %>% 
+  group_by(artist.name,artist_tag) %>% 
+  summarise_if(is.numeric,sum)
+
+all_artists_count %>% 
+  mutate(time_played=round(time_played,digits = 2)) %>%  
+  arrange(desc(time_played)) %>% 
+  head(20) %>% 
+  kableExtra::kable(col.names = c("Artist Name","Genre","Scrobbles","Total Played (hours)"),row.names = TRUE) %>% 
+  kableExtra::kable_styling(font_size = 8) %>%  
+  kableExtra::scroll_box(width = "100%", height = "500px")
+
+```
 
 
+Looking at the table above, it is astounding that I have spent at least a hundred hours with each of the top 20 artists, with the time I played Haken, Leprous and Dream Theater each separately amounting to almost a month (of my life). These simple facts would easily have eluded us if we were to only glimpse at the mere last.fm tally. This way, it is much easier to put the time I spent listening to music into perspective. Of course, most of the time when I am listening to music I am not only listening to music since music is also an amazing tool for me to focus and get into the zone. Therefore, the more I am spending time in front of the computer or in the act of commuting, the more I resort to listening to proggy tunes.
 
-```{r fig1, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE,results="asis"}
+
+```{r fig1, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10,cache=FALSE,results="asis"}
 
 song_count %>% 
   mutate(time_played=round(time_played,digits = 2)) %>%  arrange(desc(time_played)) %>% 
   head(20) %>% 
   kableExtra::kable(col.names = c("Track Name","Artist Name","Genre","Scrobbles","Total Played (hours)"),row.names = TRUE) %>% 
-  kableExtra::kable_styling(font_size = 5) %>%  
+  kableExtra::kable_styling(font_size = 8) %>%  
   kableExtra::scroll_box(width = "100%", height = "500px")
   
 
 ```
 
-It seems I have spent an almost two days of my precious lifetime being accompanied with _Crystallised_ by Haken, which is an amazing musical journey (I am obviously biased here) and was also a treat witnessing it being played live 3 years ago^[https://www.setlist.fm/setlist/haken/2019/zorlu-center-psm-istanbul-turkey-73939681.html]. 
+
+
+It seems I have spent an almost two days of my precious lifetime being _Crystallised_ by Haken, which is an amazing musical journey (I am obviously biased here) and was also a treat witnessing it being played live 3 years ago^[https://www.setlist.fm/setlist/haken/2019/zorlu-center-psm-istanbul-turkey-73939681.html]. Furthermore, the 20 minute long Rush magnum opus seemed to have squeezed in at the 15th spot with only 66 scrobbles. I remember being obssessed with Fountain of Lamneth and -The Necromancer for a couple of month, this must have been the result.(well, I still play these songs quite regularly!).
 
 ## Analysis
 
@@ -145,6 +179,8 @@ Let us dive into how we can benefit from the data set we have curated. We have i
 ### Genres and artists
 
 Well, our first figure is merely cosmetic but it does reveal some patterns regarding my listening habits. That I am a huge prog metal fan-boy did not need a second confirmation but here we can see that how _big_ of a fan-boy I am. The hierarchical graph visualization below shows us the artists and genres I listened to, where the radii of the circles are proportional to the time I spent listening to that particular artist. The immense dominance by progressive metal displayed here should not come as a surprise, I have been listening to the genre for almost 15 years now and have been consistently looking for new artists. But there are several other things that are salient from the plot: I am a sucker for good movie/series soundtracks. Especially given that I am a big sci-fi nerd, I have found that listening to soundtracks especially when studying/working is a nice break from otherwise a (prog) metal-heavy undertaking. You can also see that my interest is not only limited to prog metal, as I also have listened to a considerable number of other metal and rock artists over the last 9 years.
+
+Click [here](https://user-images.githubusercontent.com/74147629/156056140-d748de16-5aa1-44ae-9a14-fbadcf37bfee.jpeg?raw=true) for a higher quality version of the figure below.
 
 
 ```{r plot1, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="A hierarchical graph representation of what I have listened to over 9 years.",cache=FALSE}
@@ -178,16 +214,19 @@ ggraph(df_graph,layout = "circlepack",weight=size) +
   geom_node_circle(aes(fill=depth),show.legend = FALSE,color="transparent")  + 
   geom_node_text(aes(label=display_name,color=as.factor(depth)),show.legend = FALSE,family="Noto Sans",size=3.5) +
   scale_color_manual(values = c("transparent","white","#4a1c09")) + scale_fill_viridis_c(option = "B",alpha = 0.6) +
-  theme(text=element_text(family="Noto Sans"))
+  theme(text=element_text(family="Noto Sans"),
+        panel.background=element_rect(fill="white"))
 
 
 ```
 
 ### A temporal take
 
-Now to take a look at how 
+Now to take a look at how my appetite for different genres has evolved over time. By now you should be able to guess that progressive metal absolutely dominates here too. The pair of plots below shows how long I listened to my top 10 genres (and the rest grouped under "Other") over each month since February 2013. The first plot shows the share of each genre in the given month, whereas the second plot deals with the total number of hours I played tracks from each genre.
 
-```{r plot10, message = FALSE, echo = FALSE, warning=FALSE, fig.width=15, fig.height=5, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+
+
+```{r plot10, message = FALSE, echo = FALSE, warning=FALSE, fig.width=15, fig.height=5, fig.cap="Shares of genres I listened to each month over the last 9 years",cache=FALSE}
 
 genres_df <- lfm_df %>% group_by(artist_tag) %>% 
   summarise(total_played = sum(duration_ms,na.rm = T)/3600000,total_count = n()) %>% 
@@ -234,9 +273,10 @@ plotly::ggplotly(p_bar)
 
 ```
 
+There are some particularly interesting facts to be drawn from these plots. Every time I go to see a movie that moves something in me, given that it features a score that is essentially one of the pillars that makes the movie itself, I become enamored with its soundtrack as well. There are two points in time that the share of soundtrack pieces I listened to has surged: Late 2017 and Late 2021. These dates actually correspond to the release dates of Blade Runner 2049 and Dune, whose scores I found to be phenomenal.
 
 
-```{r plot11, message = FALSE, echo = FALSE, warning=FALSE, fig.width=15, fig.height=5, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+```{r plot11, message = FALSE, echo = FALSE, warning=FALSE, fig.width=15, fig.height=5, fig.cap="Hours of music I listened to each month, broken down to genres over the last 9 years",cache=FALSE}
 
 p_bar2 <- ggplot(gt_df) + 
   geom_bar(aes(x=months,y=total_played,fill=artist_tag_other),stat = "identity",alpha=0.7) + 
@@ -254,10 +294,29 @@ plotly::ggplotly(p_bar2)
 
 ```
 
+The spikes in the total hours I listened to music usually coincide with the months in which I had to work a lot. For instance, towards the end of 2019 I was on a sprint to finish my master's thesis, this was however followed by a dip in the December of the same year during which I was serving in the military. All in all, I can say that I am pretty consistent in maintaining the (in)equality between genres and that not much has changed over the last 9 years in my taste in music.
 
-### Principal Components Analysis
+### Principal Component Analysis
 
-```{r plot5, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+The audio features we retrieved using the spotify API can be used to identify genre characteristics, engineer distance measures between genres, tracks and artists, and they can also be used to build a classification model (which I am not going to do, as there is lots of overlap between genres). What I am going to do instead is to take the relevant audio features and build individual PCAs for genres, a subset of artists and a subset of songs. To see what makes my music taste... tick!
+
+But let us first see what the spotify API has in store for us. I discarded the features^[acousticness, instrumentalness, key, liveness, mode, time signature and speechiness] which I deemed irrelevant for the subset of genres I am analyzing.
+
+  - __valence:__ a measure that describes  the musical positivity of the tracks
+  - __danceability:__ shows how "danceable" a track is.
+  - __energy:__  a measure of intensity and activity levels of the track
+  - __loudness:__ a measure of, well, how loud a track is.
+  - __tempo:__ how fast the song is.
+
+A disclaimer before we move on: the genres and artists are only represented by how much I listened to them, there is obviously a bias here but it is good to know how open I am to the more distant genres. On a side note, all the variables are scaled to 0 mean without which it would not make sense to run a principal component analysis.
+
+The first two principal components shown below accounts for more than 81% of the entire variation, which is an acceptable level for visualization. The bubble sizes are proportional to the total time I listened to each genre over the last 9 years. As expected, valence and danceability seem to form an axis of their own whereas energy, loudness and tempo seem to be somewhat correlated with each other (keep in mind  that the data set only represents my own selection). 
+
+You can see that most of the prog genres are clustered around a sweet spot that I seem to like: Not too loud, not too fast, not as dark as black metal but at the same time still keeping metal traits. No wonder the power metal I like is in the immediate vicinity of prog metal, I suspected as much even though I saw prog metal and power metal being put at two extreme edges of a dichotomy. 
+
+__Genre__
+
+```{r plot5, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Genre PCA: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
 
 genre_unique <- lfm_df %>% select(name,artist.name,duration_ms,artist_tag,danceability:tempo)
 genre_unique$artist_tag <- as.character(genre_unique$artist_tag)
@@ -305,8 +364,8 @@ genre_unique$duration_played <- genre_unique$duration_played/3600000
 genre_unique <- genre_unique %>% filter(duration_played > 0.5)
 
 genre.pca <- prcomp(genre_unique[,2:6])
-summary(genre.pca)
-genre.pca$rotation
+
+#genre.pca$rotation
 
 genre.var.explained <- genre.pca$sdev^2/sum(genre.pca$sdev %>% sapply(function(x) x*x))
 
@@ -329,9 +388,9 @@ genre_unique <- genre_unique %>% arrange(desc(duration_played))
 
 p3 <- ggplot(genre_unique,aes(x=PC1,y=PC2)) + 
   geom_point(alpha=0.5,aes(size=duration_played),color="#d43a06") + 
-  geom_text(aes(label=artist_tag),size=2,alpha=0.5) +
+  geom_text(aes(label=artist_tag),size=3,alpha=0.5) +
   scale_fill_uchicago() +
-  scale_size_continuous(range = c(2,15)) + 
+  scale_size_continuous(range = c(1,15)) + 
   theme(legend.position = "none",
         panel.background = element_rect(fill="#fcede8"),
         text=element_text(family="Noto Sans"),
@@ -347,7 +406,17 @@ plotly::ggplotly(p3)
 
 ```
 
-```{r plot6, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+
+
+My usual unwillingness to listen to post-rock is not without a rationale it seems, even the sort of post-rock I listen to is way off to the region I seem to feel comfortable around. 
+
+__Artists__
+
+Instead of plotting all the artists I have ever listened to, I defined a subset of 4 genres: Progressive metal, avant-garde metal, progressive rock and power metal (looking at the genre PCA just above, you can see why I have chosen these). This plot works much better if you navigate it using the controls in the upper-right corner. The region I like is characterized by significantly low valence and danceability but fast and powerful enough to provide some stimulus. This could actually be the reason why I choose this kind of music even when I am working. 
+
+This time, the variance covered by the first two principal components is lower: 67%. Although labeled as Power Metal, Blind Guardian seem to be proggy enough so that it found such a formidable place in my taste in music.
+
+```{r plot6, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Artists from 4 selected genres PCA: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
 
 prog_unique <- lfm_df %>% select(name,artist.name,duration_ms,artist_tag,danceability:tempo)
 prog_unique$artist_tag <- as.character(prog_unique$artist_tag)
@@ -373,7 +442,7 @@ prog_unique[,4:8] <- apply(prog_unique[,4:8], MARGIN = 2, scale)
 
 prog.pca <- prcomp(prog_unique[,4:8])
 prog.res <- summary(prog.pca)
-prog.pca$rotation
+
 
 prog.var.explained <- prog.pca$sdev^2/sum(prog.res$sdev %>% sapply(function(x) x*x))
 
@@ -412,12 +481,16 @@ plotly::ggplotly(p2)
 
 ```
 
-```{r plot2, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+__Songs__
+
+So, the final plot is mostly for my own investigation as it is considerably complicated to behold without prior knowledge on these genres. But if you are willing, hover your mouse over the bubbles for information about that particular track (e.g. track name, artist and genre). I have only included the tracks I ever played from my top 25 artists. Contrary to the prior PCA plots, we can see a stronger spread along the valence/danceability axis, Tthis is partly due to the subset being narrower in terms of its genre coverage and partly due to prog metal being a genre with a lot of diversity. The songs can range from death metal-like bursts to concert ballads.  
+
+```{r plot2, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Songs PCA: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
 
 
 #### songs pca - top 25 artists ####
 
-all_artists_count <- song_count %>% group_by(artist.name,artist_tag) %>% summarise_if(is.numeric,sum)
+
 top_artists <- all_artists_count %>% arrange(desc(time_played)) %>% head(30)
 
 songs_unique <- lfm_df %>% select(name,artist.name,artist_tag,duration_ms,danceability:tempo)
@@ -437,7 +510,7 @@ songs_unique[,5:9] <- apply(songs_unique[,5:9], MARGIN = 2, scale)
 
 song.pca <- prcomp(songs_unique[,5:9])
 song.res <- summary(song.pca)
-song.pca$rotation
+#song.pca$rotation
 
 song.var.explained <- song.pca$sdev^2/sum(song.res$sdev %>% sapply(function(x) x*x))
 
@@ -460,11 +533,13 @@ rot <- rot %>% mutate(angle = (180/pi)*atan(yvar/xvar),
 songs_unique <- songs_unique %>% arrange(desc(time_played))
 songs_unique <- songs_unique %>% mutate()
 
+set.seed(5)
+
 p <- ggplot(songs_unique,aes(x=PC1,y=PC2)) + 
   geom_point(aes(size=time_played,group=name,fill=artist_tag,color=artist.name),stroke=0,alpha=0.35,shape=19) + 
   #geom_convexhull(aes(fill=artist_tag),alpha=0.1) +
   #geom_text(aes(label=artist.name),size=2,alpha=0.5,family="Noto Sans") +
-  scale_fill_uchicago() +
+  scale_fill_manual(values=sample(ggsci::pal_uchicago(palette = "dark")(20))) +
   scale_size_continuous(range = c(0,6)) + 
   theme(legend.position = "none",
         panel.background = element_rect(fill="#fcede8"),
@@ -472,7 +547,7 @@ p <- ggplot(songs_unique,aes(x=PC1,y=PC2)) +
         panel.grid.minor = element_blank()) +
   geom_segment(data=rot,aes(x = 0,y=0,xend=2*xvar,yend=2*yvar),color="#822d11",
                arrow = arrow(length = unit(1/2, 'picas'))) +
-  geom_text(data=rot,aes(label=rownames(rot),x=2*xvar,y=2*yvar,angle=angle,hjust=hjust),color="#822d11",family="Noto Sans") + labs(x=paste0("PC1: ",round(song.var.explained[1]*100,digits = 2),"% of variance", y=paste0("PC2: ",round(song.var.explained[2]*100,digits = 2),"% of variance")))
+  geom_text(data=rot,aes(label=rownames(rot),x=2*xvar,y=2*yvar,angle=angle,hjust=hjust),color="#822d11",family="Noto Sans") + labs(x=paste0("PC1: ",round(song.var.explained[1]*100,digits = 2),"% of variance"), y=paste0("PC2: ",round(song.var.explained[2]*100,digits = 2),"% of variance"))
                                                                                                                                    
 plotly::ggplotly(p)
 
@@ -480,8 +555,7 @@ plotly::ggplotly(p)
 ```
 
 
-```{r plot4, message = FALSE, echo = FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Average lahmacun prices in each Istanbul district: Use the plotly controls on the upper right corner to navigate the plot!",cache=FALSE}
+## Closure
 
-
-```
+Yep that was it, I'll show this post next time whoever tells me that I don't have a diverse-enough-taste-in-music. yes, I focus prog and prog-like metal as genres, but within genres and across songs I do have considerable amount of variation and I believe it is this variation that has kept me hooked on a couple genres for years. 
 

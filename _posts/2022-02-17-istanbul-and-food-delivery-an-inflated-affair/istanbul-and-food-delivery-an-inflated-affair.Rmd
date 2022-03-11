@@ -16,7 +16,19 @@ preview: ist_lahmacun_2022.jpeg
 ---
 <style>
 body {
-text-align: justify}
+text-align: justify;}
+
+.d-title{
+text-align: left;
+}
+
+.d-article-with-toc{
+text-align: left;
+}
+
+p {
+text-align: justify;
+}
 </style>
 
 
